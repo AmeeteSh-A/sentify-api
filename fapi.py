@@ -42,7 +42,7 @@ USER_AGENTS = [
 model = None
 vectorizer = None
 genius_client = None
-scraper = cloudscraper.create_scraper()  # handles anti-bot/captcha
+scraper = None
 
 # =================================================================================
 # --- 2. STARTUP EVENT ---
@@ -50,9 +50,18 @@ scraper = cloudscraper.create_scraper()  # handles anti-bot/captcha
 
 @app.on_event("startup")
 def load_models_and_clients():
-    global model, vectorizer, genius_client
+    global model, vectorizer, genius_client, scraper
 
-    print("Downloading NLTK data...")
+    print("Initializing startup...")
+
+    # Initialize cloudscraper
+    try:
+        scraper = cloudscraper.create_scraper()
+        print("✅ Cloudscraper initialized.")
+    except Exception as e:
+        print(f"⚠️ Cloudscraper failed: {e}")
+
+    # Download NLTK data safely
     try:
         stopwords.words('english')
     except LookupError:
@@ -62,18 +71,34 @@ def load_models_and_clients():
     except LookupError:
         nltk.download('wordnet')
 
-    print("Loading ML model and vectorizer...")
-    model = joblib.load('mood_model.pkl')
-    vectorizer = joblib.load('tfidf_vectorizer.pkl')
-    print("✅ ML components loaded.")
+    # Load ML model/vectorizer safely
+    try:
+        print("Loading ML model and vectorizer...")
+        model = joblib.load('mood_model.pkl')
+        vectorizer = joblib.load('tfidf_vectorizer.pkl')
+        print("✅ ML components loaded.")
+    except FileNotFoundError as e:
+        print(f"⚠️ Model/vectorizer file not found: {e}")
+        model = None
+        vectorizer = None
+    except Exception as e:
+        print(f"⚠️ Failed to load ML components: {e}")
+        model = None
+        vectorizer = None
 
+    # Initialize Genius API client safely
     if not GENIUS_API_TOKEN or "PASTE" in GENIUS_API_TOKEN:
-        print("⚠️ Genius API token is not set. The Genius scraper will be disabled.")
+        print("⚠️ Genius API token not set. Genius client disabled.")
         genius_client = None
     else:
-        print("Initializing Genius API client...")
-        genius_client = lyricsgenius.Genius(GENIUS_API_TOKEN, verbose=False, remove_section_headers=True)
-        print("✅ Genius client initialized.")
+        try:
+            genius_client = lyricsgenius.Genius(
+                GENIUS_API_TOKEN, verbose=False, remove_section_headers=True
+            )
+            print("✅ Genius client initialized.")
+        except Exception as e:
+            print(f"⚠️ Genius client failed to initialize: {e}")
+            genius_client = None
 
 # =================================================================================
 # --- 3. HELPERS ---
@@ -155,10 +180,13 @@ def find_lyrics(artist: str, title: str) -> str | None:
     lyrics = None
     if genius_client:
         print(f"🔎 Searching Genius for '{title}' by {artist}...")
-        song = genius_client.search_song(title, artist)
-        if song:
-            print("✅ Found on Genius.")
-            lyrics = song.lyrics
+        try:
+            song = genius_client.search_song(title, artist)
+            if song:
+                print("✅ Found on Genius.")
+                lyrics = song.lyrics
+        except Exception as e:
+            print(f"⚠️ Genius search failed: {e}")
     if not lyrics:
         print(f"🔎 Not found on Genius. Trying JioSaavn for '{title}'...")
         lyrics = get_song_lyrics_saavn(f"{title} {artist}")
@@ -196,6 +224,11 @@ class MoodResponse(BaseModel):
 
 @app.post("/predict_mood", response_model=MoodResponse)
 def predict_mood_endpoint(request: SongRequest):
+    if not model or not vectorizer:
+        raise HTTPException(
+            status_code=503,
+            detail="ML model or vectorizer not loaded. Try again later."
+        )
     lyrics = find_lyrics(request.artist, request.title)
     if not lyrics:
         raise HTTPException(status_code=404, detail="Lyrics not found for this song.")
