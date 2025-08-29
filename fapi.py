@@ -62,26 +62,22 @@ def startup_event():
     # Initialize Genius client for lyrics fetching
     if GENIUS_API_TOKEN:
         try:
-            # Initialize Genius client first
+            # Initialize Genius client first, with an increased timeout
             genius_client = lyricsgenius.Genius(
                 GENIUS_API_TOKEN,
                 verbose=False,
                 remove_section_headers=True,
-                timeout=15
+                timeout=30  # Increased timeout to give cloudscraper more time
             )
             
-            # Create a more advanced cloudscraper instance to better mimic a real browser
-            scraper = cloudscraper.create_scraper(
-                browser={
-                    'browser': 'chrome',
-                    'platform': 'windows',
-                    'mobile': False
-                }
-            )
+            # Create a cloudscraper instance. It's designed to wait and solve
+            # Cloudflare's JS challenges, which can take a few seconds.
+            scraper = cloudscraper.create_scraper()
+            
             # Replace the default session with our enhanced scraper
             genius_client.session = scraper
             
-            print("✅ Genius client initialized and session replaced with advanced cloudscraper")
+            print("✅ Genius client initialized with increased timeout and cloudscraper")
         except Exception as e:
             print(f"⚠️ Genius client initialization failed: {e}")
             genius_client = None
