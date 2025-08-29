@@ -42,24 +42,15 @@ genius_client = None
 def startup_event():
     """
     Initializes necessary components when the API starts.
+    NLTK data is now pre-downloaded by the build script.
     """
     global model, vectorizer, genius_client
 
     print("🔹 Starting SpotifyMood API...")
 
-    # NLTK downloads
-    # Ensures necessary NLTK data packages are available.
-    nltk_data_path = "/tmp/nltk_data"
-    if not os.path.exists(nltk_data_path):
-        os.makedirs(nltk_data_path)
-    nltk.data.path.append(nltk_data_path)
-
-    for pkg in ["stopwords", "wordnet"]:
-        try:
-            nltk.data.find(f"corpora/{pkg}")
-        except LookupError:
-            print(f"Downloading NLTK package: {pkg}...")
-            nltk.download(pkg, download_dir=nltk_data_path)
+    # The NLTK download logic has been removed from this function.
+    # It is now handled by the build.sh script to prevent race
+    # conditions and crashes during startup on Render.
 
     # Load ML components
     try:
@@ -97,7 +88,7 @@ def transliterate_if_needed(text: str) -> str:
         "Gurmukhi":   (r'[\u0A00-\u0A7F]', sanscript.GURMUKHI),
     }
     for script_name, (pattern, script_const) in scripts_to_check.items():
-        if re.search(pattern, text):
+        if re..search(pattern, text):
             print(f"Detected {script_name} script, transliterating...")
             return transliterate(text, script_const, sanscript.ITRANS)
     return text
