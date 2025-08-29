@@ -27,8 +27,8 @@ app = FastAPI(
 # ==============================
 # Configs
 # ==============================
-# Genius API token is now hardcoded
-GENIUS_API_TOKEN = "lyN7oYYT8zEG_I1eg1ySpesW_1wW9HnYg4Ctv6tZgw-wYoAncBsXYs-sWJZ1l3ES"
+# Load the Genius API token from an environment variable for security
+GENIUS_API_TOKEN = os.getenv("GENIUS_API_TOKEN", "")
 
 # Global objects
 model = None
@@ -82,7 +82,6 @@ def startup_event():
             print(f"⚠️ Genius client initialization failed: {e}")
             genius_client = None
     else:
-        # This else block will now not be reached, but is kept for logical completeness
         print("⚠️ Genius API token not set. Lyrics fetching will be disabled.")
 
 # ==============================
@@ -150,7 +149,8 @@ def find_lyrics(artist: str, title: str) -> str | None:
             print("❌ Lyrics not found on Genius.")
             return None
     except Exception as e:
-        print(f"⚠️ An error occurred during Genius search: {e}")
+        # Added detailed error logging to see the exact problem
+        print(f"⚠️ An error occurred during Genius search: {type(e).__name__}: {e}")
         return None
 
 # ==============================
