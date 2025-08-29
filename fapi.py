@@ -4,6 +4,7 @@ import html
 import joblib
 import uvicorn
 import nltk
+import cloudscraper
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -65,10 +66,16 @@ def startup_event():
     # Initialize Genius client for lyrics fetching
     if GENIUS_API_TOKEN:
         try:
+            # Use cloudscraper to bypass Cloudflare protection on Genius.com
+            scraper = cloudscraper.create_scraper()
             genius_client = lyricsgenius.Genius(
-                GENIUS_API_TOKEN, verbose=False, remove_section_headers=True, timeout=15
+                GENIUS_API_TOKEN,
+                verbose=False,
+                remove_section_headers=True,
+                timeout=15,
+                session=scraper  # Pass the scraper as the request session
             )
-            print("✅ Genius client initialized")
+            print("✅ Genius client initialized with cloudscraper")
         except Exception as e:
             print(f"⚠️ Genius client initialization failed: {e}")
             genius_client = None
@@ -200,4 +207,3 @@ def read_root():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
-
