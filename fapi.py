@@ -62,19 +62,26 @@ def startup_event():
     # Initialize Genius client for lyrics fetching
     if GENIUS_API_TOKEN:
         try:
-            # Initialize Genius client first, without the session argument
+            # Initialize Genius client first
             genius_client = lyricsgenius.Genius(
                 GENIUS_API_TOKEN,
                 verbose=False,
                 remove_section_headers=True,
                 timeout=15
             )
-            # Create a cloudscraper instance and replace the default session
-            # This is the correct way to bypass Cloudflare protection
-            scraper = cloudscraper.create_scraper()
+            
+            # Create a more advanced cloudscraper instance to better mimic a real browser
+            scraper = cloudscraper.create_scraper(
+                browser={
+                    'browser': 'chrome',
+                    'platform': 'windows',
+                    'mobile': False
+                }
+            )
+            # Replace the default session with our enhanced scraper
             genius_client.session = scraper
             
-            print("✅ Genius client initialized and session replaced with cloudscraper")
+            print("✅ Genius client initialized and session replaced with advanced cloudscraper")
         except Exception as e:
             print(f"⚠️ Genius client initialization failed: {e}")
             genius_client = None
