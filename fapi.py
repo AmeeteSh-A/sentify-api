@@ -49,10 +49,6 @@ def startup_event():
 
     print("🔹 Starting SpotifyMood API...")
 
-    # The NLTK download logic has been removed from this function.
-    # It is now handled by the build.sh script to prevent race
-    # conditions and crashes during startup on Render.
-
     # Load ML components
     try:
         model = joblib.load("mood_model.pkl")
@@ -66,16 +62,19 @@ def startup_event():
     # Initialize Genius client for lyrics fetching
     if GENIUS_API_TOKEN:
         try:
-            # Use cloudscraper to bypass Cloudflare protection on Genius.com
-            scraper = cloudscraper.create_scraper()
+            # Initialize Genius client first, without the session argument
             genius_client = lyricsgenius.Genius(
                 GENIUS_API_TOKEN,
                 verbose=False,
                 remove_section_headers=True,
-                timeout=15,
-                session=scraper  # Pass the scraper as the request session
+                timeout=15
             )
-            print("✅ Genius client initialized with cloudscraper")
+            # Create a cloudscraper instance and replace the default session
+            # This is the correct way to bypass Cloudflare protection
+            scraper = cloudscraper.create_scraper()
+            genius_client.session = scraper
+            
+            print("✅ Genius client initialized and session replaced with cloudscraper")
         except Exception as e:
             print(f"⚠️ Genius client initialization failed: {e}")
             genius_client = None
@@ -95,7 +94,6 @@ def transliterate_if_needed(text: str) -> str:
         "Gurmukhi":   (r'[\u0A00-\u0A7F]', sanscript.GURMUKHI),
     }
     for script_name, (pattern, script_const) in scripts_to_check.items():
-        # Corrected the line below by removing the extra dot
         if re.search(pattern, text):
             print(f"Detected {script_name} script, transliterating...")
             return transliterate(text, script_const, sanscript.ITRANS)
@@ -207,3 +205,4 @@ def read_root():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
