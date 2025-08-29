@@ -88,7 +88,8 @@ def transliterate_if_needed(text: str) -> str:
         "Gurmukhi":   (r'[\u0A00-\u0A7F]', sanscript.GURMUKHI),
     }
     for script_name, (pattern, script_const) in scripts_to_check.items():
-        if re..search(pattern, text):
+        # Corrected the line below by removing the extra dot
+        if re.search(pattern, text):
             print(f"Detected {script_name} script, transliterating...")
             return transliterate(text, script_const, sanscript.ITRANS)
     return text
