@@ -27,7 +27,8 @@ app = FastAPI(
 # ==============================
 # Configs
 # ==============================
-GENIUS_API_TOKEN = os.getenv("GENIUS_API_TOKEN", "")
+# Genius API token is now hardcoded
+GENIUS_API_TOKEN = "lyN7oYYT8zEG_I1eg1ySpesW_1wW9HnYg4Ctv6tZgw-wYoAncBsXYs-sWJZ1l3ES"
 
 # Global objects
 model = None
@@ -81,6 +82,7 @@ def startup_event():
             print(f"⚠️ Genius client initialization failed: {e}")
             genius_client = None
     else:
+        # This else block will now not be reached, but is kept for logical completeness
         print("⚠️ Genius API token not set. Lyrics fetching will be disabled.")
 
 # ==============================
@@ -206,3 +208,4 @@ def read_root():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
